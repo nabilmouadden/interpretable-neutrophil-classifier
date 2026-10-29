@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Environments
+.venv/
+venv/
+env/
+.env
+
+# Data, runs, weights, caches: never committed
+data/
+runs/
+outputs/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.npz
+hf_cache/
+.cache/
+
+# Editors / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store

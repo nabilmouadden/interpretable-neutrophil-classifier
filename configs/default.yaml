@@ -1,0 +1,108 @@
+# Default configuration.
+#
+# Any key can be overridden on the command line, e.g.
+#   neutroclf train --config configs/default.yaml --set train.epochs=10 --set data.num_workers=8
+# A config may also inherit from another one with `base: <relative path>` (see tests/toy_config.yaml).
+
+seed: 42                      # run seed
+
+# ---------------------------------------------------------------------------
+# Label space. Order matters: it fixes the column order of every array the
+# package writes. `normal` is mutually exclusive with the six abnormalities,
+# which may co-occur on the same cell.
+# ---------------------------------------------------------------------------
+categories:
+  - normal
+  - hypogranulation
+  - hypergranulation
+  - hyposegmentation
+  - hypersegmentation
+  - chromatin_hypercondensation
+  - dohle_bodies
+normal_category: normal
+
+# ---------------------------------------------------------------------------
+# Category-to-feature map M (7 categories x 4 graded features, values in [0, 1]).
+#
+# * `normal` is the normal row m_N. For nuclear segmentation and granularity
+#   both ends of the scale are abnormal, so the normal cell sits mid-range
+#   (0.5). For chromatin hypercondensation and Doehle bodies a low score is
+#   normal (0.0) and a high score abnormal.
+# * Each abnormal category sets ONLY the feature it names to its textbook
+#   extreme; every feature it does not list keeps the normal value.
+# * Per-cell feature target (active category set A):
+#       t_j = m_{k*_j, j},  k*_j = argmax_{k in A} |m_kj - m_Nj|
+#   i.e. per feature, the value deviating most from normal among the cell's
+#   categories. If two active categories tie with different values (e.g. a
+#   cell labelled both hypo- and hypersegmented) the target is the normal
+#   value. A normal cell takes the normal value of every feature.
+# ---------------------------------------------------------------------------
+feature_map:
+  features:
+    - nuclear_segmentation          # 0 = reduced lobulation (pince-nez) ... 1 = >= 6 lobes
+    - chromatin_hypercondensation   # 0 = fine, open chromatin ... 1 = dense, coarsely clumped
+    - granularity                   # 0 = pale, granule-poor ... 1 = packed with coarse granules
+    - dohle_bodies                  # 0 = no inclusion ... 1 = distinct pale-blue peripheral inclusion
+  normal:
+    nuclear_segmentation: 0.5
+    chromatin_hypercondensation: 0.0
+    granularity: 0.5
+    dohle_bodies: 0.0
+  profiles:
+    hypogranulation: {granularity: 0.0}
+    hypergranulation: {granularity: 1.0}
+    hyposegmentation: {nuclear_segmentation: 0.0}
+    hypersegmentation: {nuclear_segmentation: 1.0}
+    chromatin_hypercondensation: {chromatin_hypercondensation: 1.0}
+    dohle_bodies: {dohle_bodies: 1.0}
+
+data:
+  image_size: 224             # input resolution fed to the encoder (square resize)
+  # Cell-level stratified multi-label split (iterative stratification).
+  # A manifest `split` column overrides this (e.g. for a slide-level split).
+  split_fractions: {train: 0.8, val: 0.1, test: 0.1}
+  split_seed: null            # null -> use the run seed (each run draws its own split)
+  augmentation: standard      # standard | stain | none   (stain = colour/stain augmentation)
+  num_workers: 4
+
+model:
+  encoder: "hf-hub:1aurent/vit_base_patch14_224.dinobloom"   # DinoBloom-B (ViT-B/14)
+  pretrained: true
+  encoder_kwargs: {}          # extra keyword arguments for timm.create_model
+  trainable_blocks: 6         # fine-tune the last N transformer blocks (+ final norm); -1 = all
+  feature_dim: 128            # width of the cross-attention feature head
+  feature_heads: 4            # attention heads in the feature head
+  feature_mlp_hidden: 128     # hidden width of each per-feature MLP
+  category_dropout: 0.5       # dropout before the linear category head
+
+loss:
+  focal_gamma: 2.0
+  focal_alpha: 0.25
+  pos_weight_cap: 50.0        # per-category pos_weight = min(n_neg / n_pos, cap), from the training split
+  lambda_feature: 2.0         # weight of the feature BCE against mapped targets
+  lambda_consistency: 0.1     # weight of the category/feature consistency term
+
+train:
+  epochs: 60
+  batch_size: 16
+  lr_encoder: 5.0e-6
+  lr_category_head: 1.0e-4
+  lr_feature_head: 1.0e-3
+  weight_decay: 1.0e-4
+  ema_decay: 0.999            # exponential moving average of weights (Polyak averaging); 0 disables
+  amp: true                   # mixed precision, used on CUDA only
+  device: auto                # auto | cpu | cuda | cuda:0 ...
+  max_steps_per_epoch: null   # cap on optimisation steps per epoch (smoke tests); null = full epoch
+  selection_metric: macro_f1  # validation metric for best-checkpoint selection (EMA weights, cut-off 0.5)
+
+calibration:
+  alpha: 0.05                 # conformal miscoverage; target coverage 1 - alpha = 95 %
+  threshold_grid: {start: 0.05, stop: 0.95, step: 0.05}   # per-category cut-off search (max F1 on val)
+
+evaluation:
+  n_bootstrap: 1000
+  bootstrap_seed: 0
+  ece_bins: 10                # equal-width bins
+  referral_max_fraction: 0.20
+  referral_step: 0.01
+  decision_thresholds: {start: 0.01, stop: 0.99, step: 0.01}

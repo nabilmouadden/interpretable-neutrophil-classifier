@@ -1,0 +1,22 @@
+# Label mapping for the external NeuNN dataset (Hospital Clinic de Barcelona;
+# Mendeley Data, doi:10.17632/rh3jw43hjs.1).
+#
+# NeuNN is single-label. Only three of its classes correspond to categories of
+# this model; every other class is excluded from the evaluation (reported as
+# `n_excluded`). Keys are matched case-insensitively after stripping spaces,
+# underscores and hyphens, so "Dohle bodies", "dohle_bodies" and "DohleBodies"
+# are the same key. CHECK the class-folder names of your download and add them
+# here if they differ.
+label_map:
+  normal: normal
+  normalneutrophil: normal
+  normalneutrophils: normal
+  hypogranulation: hypogranulation
+  hypogranulated: hypogranulation
+  hypogranulatedneutrophil: hypogranulation
+  hypogranulatedneutrophils: hypogranulation
+  dohle: dohle_bodies
+  dohlebodies: dohle_bodies
+  dohlebody: dohle_bodies
+  döhle: dohle_bodies
+  döhlebodies: dohle_bodies

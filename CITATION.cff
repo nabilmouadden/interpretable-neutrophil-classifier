@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "interpretable-neutrophil-classifier"
+type: software
+authors:
+  - family-names: Mouadden
+    given-names: Nabil
+version: 1.0.0
+date-released: "2026-10-29"
+license: MIT
+repository-code: "https://github.com/nabilmouadden/interpretable-neutrophil-classifier"
